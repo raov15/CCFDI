@@ -95,7 +95,7 @@ cfdi_system/
 ```bash
 git clone https://github.com/tu_usuario/cfdi_system.git
 cd cfdi_system
-
+```` ` 
 ### 2. Crear entorno virtual
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
