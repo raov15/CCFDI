@@ -1,0 +1,125 @@
+import pandas as pd
+import math
+import re
+
+# ================================
+# 🔹 FUNCIONES EQUIVALENTES EXCEL
+# ================================
+
+def IF(condicion, verdadero, falso):
+    return verdadero if condicion else falso
+
+def SUMA(*args):
+    return sum(args)
+
+def PROMEDIO(lista):
+    return sum(lista) / len(lista) if len(lista) > 0 else 0
+
+def ROUNDDOWN(valor, decimales):
+    factor = 10 ** decimales
+    return math.floor(valor * factor) / factor
+
+def VLOOKUP(valor, df, columna_busqueda, columna_resultado):
+    resultado = df.loc[df[columna_busqueda] == valor, columna_resultado]
+    if len(resultado) == 0:
+        return None
+    return resultado.values[0]
+
+# ================================
+# 🔹 PARSER DE FÓRMULAS
+# ================================
+
+def traducir_formula(formula):
+    """
+    Convierte fórmula de Excel a Python
+    """
+
+    if not isinstance(formula, str):
+        return formula
+
+    if not formula.startswith("="):
+        return formula
+
+    f = formula
+
+    # Quitar "="
+    f = f[1:]
+
+    # IF → IF()
+    f = f.replace("IF(", "IF(")
+
+    # SUMA → SUMA
+    f = f.replace("SUMA", "SUMA")
+
+    # PROMEDIO
+    f = f.replace("PROMEDIO", "PROMEDIO")
+
+    # ROUNDDOWN
+    f = f.replace("ROUNDDOWN", "ROUNDDOWN")
+
+    # Operadores
+    f = f.replace("^", "**")
+
+    return f
+
+
+# ================================
+# 🔹 EVALUADOR DE CELDAS
+# ================================
+
+def evaluar_formula(formula, contexto):
+    """
+    Evalúa fórmula ya convertida a Python
+    contexto = diccionario con valores de celdas
+    """
+
+    try:
+        return eval(formula, {
+            "IF": IF,
+            "SUMA": SUMA,
+            "PROMEDIO": PROMEDIO,
+            "ROUNDDOWN": ROUNDDOWN,
+            "VLOOKUP": VLOOKUP,
+            "math": math
+        }, contexto)
+
+    except Exception as e:
+        print(f"Error evaluando: {formula} -> {e}")
+        return None
+
+
+# ================================
+# 🔹 PROCESAR DATAFRAME COMPLETO
+# ================================
+
+def calcular_dataframe(df, tablas_aux=None):
+    """
+    Recorre todo el DataFrame y calcula fórmulas
+    """
+
+    df_resultado = df.copy()
+
+    for index, row in df.iterrows():
+
+        contexto = {}
+
+        # Crear contexto tipo: A1, B1, C1...
+        for col in df.columns:
+            valor = row[col]
+            contexto[col] = valor
+
+        for col in df.columns:
+            valor = row[col]
+
+            if isinstance(valor, str) and valor.startswith("="):
+
+                formula_py = traducir_formula(valor)
+
+                resultado = evaluar_formula(formula_py, contexto)
+
+                df_resultado.at[index, col] = resultado
+
+                # actualizar contexto dinámicamente
+                contexto[col] = resultado
+
+    return df_resultado
